@@ -1,6 +1,63 @@
 import crypto from "crypto";
 
 export default (plugin: any) => {
+  // Extend the auth controller to modify login response
+  const authController = plugin.controllers.auth;
+  const originalCallback = authController.callback;
+
+  // Override the callback function (used for login)
+  authController.callback = async (ctx: any) => {
+    // Call the original callback to get the default response
+    const response = await originalCallback(ctx);
+
+    // If login was successful and we have a user
+    if (response && response.user) {
+      // Fetch the user with role information
+      const populatedUser = await strapi
+        .query("plugin::users-permissions.user")
+        .findOne({
+          where: { id: response.user.id },
+          populate: ["role"],
+        });
+
+      // Update the response with the populated user data
+      response.user = {
+        ...response.user,
+        role: populatedUser.role,
+      };
+    }
+
+    return response;
+  };
+
+  // Extend the user controller to modify /me response
+  const userController = plugin.controllers.user;
+  const originalGetMe = userController.me;
+
+  // Override the me function
+  userController.me = async (ctx: any) => {
+    // Get authenticated user
+    const user = ctx.state.user;
+
+    if (!user) {
+      return ctx.unauthorized();
+    }
+
+    // Fetch the user with role information
+    const populatedUser = await strapi
+      .query("plugin::users-permissions.user")
+      .findOne({
+        where: { id: user.id },
+        populate: ["role"],
+      });
+
+    // Return the populated user data
+    return {
+      ...populatedUser,
+      role: populatedUser.role,
+    };
+  };
+
   plugin.controllers.user.invite = async (ctx: any) => {
     const { email, role } = ctx.request.body;
 
