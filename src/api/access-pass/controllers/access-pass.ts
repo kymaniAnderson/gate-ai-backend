@@ -32,6 +32,42 @@ const validateDateFormat = (date: string): boolean => {
   return dateRegex.test(date);
 };
 
+const formatAccessPassResponse = (pass: any) => {
+  // Helper to format the response according to frontend needs
+  const response: any = {
+    id: pass.id,
+    visitorName: pass.visitorName,
+    location: pass.resident?.units?.[0]?.name || "Unknown Location", // Assuming resident has units
+    name: pass.visitorName,
+    pin: pass.accessCode,
+    qrCode: pass.qrCode,
+    status: pass.status,
+    createdAt: pass.createdAt,
+    accessType: pass.accessType,
+  };
+
+  // Add time-bound specific fields
+  if (pass.accessType === "time-bound") {
+    response.validFrom = pass.date;
+    response.validTimeFrom = pass.timeFrom;
+    response.validTimeTo = pass.timeTo;
+  }
+
+  // Add date-range specific fields
+  if (pass.accessType === "date-range") {
+    response.validFrom = pass.dateFrom;
+    response.validTo = pass.dateTo;
+  }
+
+  // Add usage-limit specific fields
+  if (pass.accessType === "usage-limit") {
+    response.usageLimit = pass.usageLimit;
+    response.usageCount = pass.usageCount;
+  }
+
+  return response;
+};
+
 export default factories.createCoreController(
   "api::access-pass.access-pass",
   ({ strapi }) => ({
@@ -134,6 +170,189 @@ export default factories.createCoreController(
         };
       } catch (error) {
         return ctx.badRequest("Failed to create access pass");
+      }
+    },
+
+    async getByCode(ctx) {
+      const { code } = ctx.params;
+
+      try {
+        // Find the access pass by code
+        const pass = await strapi.db
+          .query("api::access-pass.access-pass")
+          .findOne({
+            where: { accessCode: code },
+            populate: {
+              resident: {
+                populate: {
+                  units: true,
+                },
+              },
+            },
+          });
+
+        if (!pass) {
+          return ctx.notFound("Access pass not found");
+        }
+
+        // Check if pass is expired
+        const now = new Date();
+        let isExpired = false;
+
+        switch (pass.accessType) {
+          case "time-bound":
+            const passDate = new Date(pass.date);
+            const [hours, minutes] = pass.timeTo.split(":");
+            passDate.setHours(parseInt(hours, 10), parseInt(minutes, 10));
+            isExpired = now > passDate;
+            break;
+
+          case "date-range":
+            const endDate = new Date(pass.dateTo);
+            endDate.setHours(23, 59, 59);
+            isExpired = now > endDate;
+            break;
+
+          case "usage-limit":
+            isExpired = pass.usageCount >= pass.usageLimit;
+            break;
+        }
+
+        // Update status if expired
+        if (isExpired && pass.status === "active") {
+          await strapi.db.query("api::access-pass.access-pass").update({
+            where: { id: pass.id },
+            data: { status: "expired" },
+          });
+          pass.status = "expired";
+        }
+
+        return formatAccessPassResponse(pass);
+      } catch (error) {
+        console.error("Error fetching access pass:", error);
+        return ctx.badRequest("Failed to fetch access pass");
+      }
+    },
+
+    async getMyPasses(ctx) {
+      const { user } = ctx.state;
+
+      if (!user) {
+        return ctx.unauthorized(
+          "You must be logged in to view your access passes"
+        );
+      }
+
+      try {
+        const passes = await strapi.db
+          .query("api::access-pass.access-pass")
+          .findMany({
+            where: { resident: user.id },
+            populate: {
+              resident: {
+                populate: {
+                  units: true,
+                },
+              },
+            },
+            orderBy: { createdAt: "desc" },
+          });
+
+        // Check and update status for each pass
+        const updatedPasses = await Promise.all(
+          passes.map(async (pass) => {
+            const now = new Date();
+            let isExpired = false;
+
+            switch (pass.accessType) {
+              case "time-bound":
+                const passDate = new Date(pass.date);
+                const [hours, minutes] = pass.timeTo.split(":");
+                passDate.setHours(parseInt(hours, 10), parseInt(minutes, 10));
+                isExpired = now > passDate;
+                break;
+
+              case "date-range":
+                const endDate = new Date(pass.dateTo);
+                endDate.setHours(23, 59, 59);
+                isExpired = now > endDate;
+                break;
+
+              case "usage-limit":
+                isExpired = pass.usageCount >= pass.usageLimit;
+                break;
+            }
+
+            // Update status if expired
+            if (isExpired && pass.status === "active") {
+              const updatedPass = await strapi.db
+                .query("api::access-pass.access-pass")
+                .update({
+                  where: { id: pass.id },
+                  data: { status: "expired" },
+                });
+              return formatAccessPassResponse(updatedPass);
+            }
+
+            return formatAccessPassResponse(pass);
+          })
+        );
+
+        // Group passes by status
+        const groupedPasses = {
+          active: updatedPasses.filter((pass) => pass.status === "active"),
+          expired: updatedPasses.filter((pass) => pass.status === "expired"),
+          cancelled: updatedPasses.filter(
+            (pass) => pass.status === "cancelled"
+          ),
+        };
+
+        return groupedPasses;
+      } catch (error) {
+        console.error("Error fetching access passes:", error);
+        return ctx.badRequest("Failed to fetch access passes");
+      }
+    },
+
+    async cancelPass(ctx) {
+      const { id } = ctx.params;
+      const { user } = ctx.state;
+
+      if (!user) {
+        return ctx.unauthorized(
+          "You must be logged in to cancel an access pass"
+        );
+      }
+
+      try {
+        // Find the pass and check ownership
+        const pass = await strapi.db
+          .query("api::access-pass.access-pass")
+          .findOne({
+            where: { id },
+            populate: { resident: true },
+          });
+
+        if (!pass) {
+          return ctx.notFound("Access pass not found");
+        }
+
+        if (pass.resident.id !== user.id) {
+          return ctx.forbidden("You can only cancel your own access passes");
+        }
+
+        // Update the pass status to cancelled
+        const updatedPass = await strapi.db
+          .query("api::access-pass.access-pass")
+          .update({
+            where: { id },
+            data: { status: "cancelled" },
+          });
+
+        return formatAccessPassResponse(updatedPass);
+      } catch (error) {
+        console.error("Error cancelling access pass:", error);
+        return ctx.badRequest("Failed to cancel access pass");
       }
     },
   })
