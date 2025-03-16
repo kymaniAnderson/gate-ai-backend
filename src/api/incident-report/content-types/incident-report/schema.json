@@ -1,0 +1,33 @@
+{
+  "kind": "collectionType",
+  "collectionName": "incident_reports",
+  "info": {
+    "singularName": "incident-report",
+    "pluralName": "incident-reports",
+    "displayName": "Incident Report"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "date": {
+      "type": "date",
+      "required": true
+    },
+    "timeFrom": {
+      "type": "string",
+      "required": true
+    },
+    "timeTo": {
+      "type": "string",
+      "required": true
+    },
+    "report": {
+      "type": "text",
+      "required": true
+    },
+    "accessLogs": {
+      "type": "json"
+    }
+  }
+} 

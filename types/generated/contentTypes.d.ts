@@ -461,6 +461,39 @@ export interface ApiGlobalGlobal extends Struct.SingleTypeSchema {
   };
 }
 
+export interface ApiIncidentReportIncidentReport
+  extends Struct.CollectionTypeSchema {
+  collectionName: 'incident_reports';
+  info: {
+    displayName: 'Incident Report';
+    pluralName: 'incident-reports';
+    singularName: 'incident-report';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    accessLogs: Schema.Attribute.JSON;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    date: Schema.Attribute.Date & Schema.Attribute.Required;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::incident-report.incident-report'
+    > &
+      Schema.Attribute.Private;
+    publishedAt: Schema.Attribute.DateTime;
+    report: Schema.Attribute.Text & Schema.Attribute.Required;
+    timeFrom: Schema.Attribute.String & Schema.Attribute.Required;
+    timeTo: Schema.Attribute.String & Schema.Attribute.Required;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+  };
+}
+
 export interface ApiUnitUnit extends Struct.CollectionTypeSchema {
   collectionName: 'units';
   info: {
@@ -1006,6 +1039,7 @@ declare module '@strapi/strapi' {
       'admin::user': AdminUser;
       'api::access-pass.access-pass': ApiAccessPassAccessPass;
       'api::global.global': ApiGlobalGlobal;
+      'api::incident-report.incident-report': ApiIncidentReportIncidentReport;
       'api::unit.unit': ApiUnitUnit;
       'plugin::content-releases.release': PluginContentReleasesRelease;
       'plugin::content-releases.release-action': PluginContentReleasesReleaseAction;
