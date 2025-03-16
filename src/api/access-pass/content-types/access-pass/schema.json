@@ -1,0 +1,76 @@
+{
+  "kind": "collectionType",
+  "collectionName": "access_passes",
+  "info": {
+    "singularName": "access-pass",
+    "pluralName": "access-passes",
+    "displayName": "Access Pass",
+    "description": "Visitor access passes"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "visitorName": {
+      "type": "string",
+      "required": true
+    },
+    "accessType": {
+      "type": "enumeration",
+      "enum": ["time-bound", "date-range", "usage-limit"],
+      "required": true
+    },
+    "date": {
+      "type": "date"
+    },
+    "timeFrom": {
+      "type": "string"
+    },
+    "timeTo": {
+      "type": "string"
+    },
+    "dateFrom": {
+      "type": "date"
+    },
+    "dateTo": {
+      "type": "date"
+    },
+    "usageLimit": {
+      "type": "integer",
+      "min": 1
+    },
+    "usageCount": {
+      "type": "integer",
+      "default": 0
+    },
+    "accessMethod": {
+      "type": "enumeration",
+      "enum": ["qr-pin", "pin-only"],
+      "required": true
+    },
+    "notifications": {
+      "type": "boolean",
+      "default": false,
+      "required": true
+    },
+    "accessCode": {
+      "type": "string",
+      "required": true
+    },
+    "qrCode": {
+      "type": "text"
+    },
+    "status": {
+      "type": "enumeration",
+      "enum": ["active", "expired", "cancelled"],
+      "default": "active",
+      "required": true
+    },
+    "resident": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user",
+      "inversedBy": "accessPasses"
+    }
+  }
+} 

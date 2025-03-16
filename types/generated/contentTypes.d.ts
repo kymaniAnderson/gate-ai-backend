@@ -369,6 +369,66 @@ export interface AdminUser extends Struct.CollectionTypeSchema {
   };
 }
 
+export interface ApiAccessPassAccessPass extends Struct.CollectionTypeSchema {
+  collectionName: 'access_passes';
+  info: {
+    description: 'Visitor access passes';
+    displayName: 'Access Pass';
+    pluralName: 'access-passes';
+    singularName: 'access-pass';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    accessCode: Schema.Attribute.String & Schema.Attribute.Required;
+    accessMethod: Schema.Attribute.Enumeration<['qr-pin', 'pin-only']> &
+      Schema.Attribute.Required;
+    accessType: Schema.Attribute.Enumeration<
+      ['time-bound', 'date-range', 'usage-limit']
+    > &
+      Schema.Attribute.Required;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    date: Schema.Attribute.Date;
+    dateFrom: Schema.Attribute.Date;
+    dateTo: Schema.Attribute.Date;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::access-pass.access-pass'
+    > &
+      Schema.Attribute.Private;
+    notifications: Schema.Attribute.Boolean &
+      Schema.Attribute.Required &
+      Schema.Attribute.DefaultTo<false>;
+    publishedAt: Schema.Attribute.DateTime;
+    qrCode: Schema.Attribute.Text;
+    resident: Schema.Attribute.Relation<
+      'manyToOne',
+      'plugin::users-permissions.user'
+    >;
+    status: Schema.Attribute.Enumeration<['active', 'expired', 'cancelled']> &
+      Schema.Attribute.Required &
+      Schema.Attribute.DefaultTo<'active'>;
+    timeFrom: Schema.Attribute.String;
+    timeTo: Schema.Attribute.String;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    usageCount: Schema.Attribute.Integer & Schema.Attribute.DefaultTo<0>;
+    usageLimit: Schema.Attribute.Integer &
+      Schema.Attribute.SetMinMax<
+        {
+          min: 1;
+        },
+        number
+      >;
+    visitorName: Schema.Attribute.String & Schema.Attribute.Required;
+  };
+}
+
 export interface ApiGlobalGlobal extends Struct.SingleTypeSchema {
   collectionName: 'globals';
   info: {
@@ -888,6 +948,10 @@ export interface PluginUsersPermissionsUser
     timestamps: true;
   };
   attributes: {
+    accessPasses: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::access-pass.access-pass'
+    >;
     blocked: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<false>;
     confirmationToken: Schema.Attribute.String & Schema.Attribute.Private;
     confirmed: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<false>;
@@ -940,6 +1004,7 @@ declare module '@strapi/strapi' {
       'admin::transfer-token': AdminTransferToken;
       'admin::transfer-token-permission': AdminTransferTokenPermission;
       'admin::user': AdminUser;
+      'api::access-pass.access-pass': ApiAccessPassAccessPass;
       'api::global.global': ApiGlobalGlobal;
       'api::unit.unit': ApiUnitUnit;
       'plugin::content-releases.release': PluginContentReleasesRelease;

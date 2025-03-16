@@ -9,7 +9,8 @@
     "displayName": "User"
   },
   "options": {
-    "timestamps": true
+    "timestamps": true,
+    "draftAndPublish": false
   },
   "attributes": {
     "username": {
@@ -70,6 +71,12 @@
       "relation": "oneToMany",
       "target": "api::unit.unit",
       "mappedBy": "user"
+    },
+    "accessPasses": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::access-pass.access-pass",
+      "mappedBy": "resident"
     }
   }
 }
