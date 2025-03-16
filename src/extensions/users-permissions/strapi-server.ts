@@ -59,7 +59,7 @@ export default (plugin: any) => {
   };
 
   plugin.controllers.user.invite = async (ctx: any) => {
-    const { email, role } = ctx.request.body;
+    const { email, role, name } = ctx.request.body;
 
     if (!email) {
       return ctx.badRequest("Email is required");
@@ -67,6 +67,10 @@ export default (plugin: any) => {
 
     if (!role) {
       return ctx.badRequest("Role is required");
+    }
+
+    if (!name) {
+      return ctx.badRequest("Name is required");
     }
 
     try {
@@ -98,7 +102,9 @@ export default (plugin: any) => {
       // Create the user
       const user = await strapi.query("plugin::users-permissions.user").create({
         data: {
+          username: email, // Using email as username
           email,
+          name,
           password,
           role: roleEntity.id,
           confirmed: true,
@@ -112,6 +118,7 @@ export default (plugin: any) => {
           to: email,
           subject: "Invitation to join",
           html: `
+            <p>Hello ${name},</p>
             <p>You have been invited to join our platform.</p>
             <p>Your login credentials:</p>
             <p>Email: ${email}</p>
@@ -125,6 +132,7 @@ export default (plugin: any) => {
           user: {
             id: user.id,
             email: user.email,
+            name: user.name,
           },
         });
       } catch (error) {
