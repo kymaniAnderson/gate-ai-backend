@@ -10,22 +10,10 @@ const generatePin = () => {
   return Math.floor(100000 + Math.random() * 900000).toString();
 };
 
-const generateQRCode = async (accessCode: string): Promise<string> => {
+const generateQRCode = async (data: string): Promise<string> => {
   try {
-    // Generate QR code with just the access code
-    // Configure QR code for optimal scanning
-    const qrOptions = {
-      errorCorrectionLevel: "Q", // Higher error correction for better scanning
-      margin: 2, // Smaller margin for cleaner look
-      width: 200, // Consistent size
-      color: {
-        dark: "#000000", // Black dots
-        light: "#FFFFFF", // White background
-      },
-    };
-
-    // Just encode the access code - simpler is better for scanning
-    return await QRCode.toDataURL(accessCode, qrOptions);
+    // Generate QR code as base64
+    return await QRCode.toDataURL(data);
   } catch (err) {
     console.error("Error generating QR code:", err);
     throw err;
